@@ -1,0 +1,13 @@
+version: "3.6"
+
+services:
+  main:
+    build: .
+    volumes:
+      - .:/main
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    working_dir: /main
+    environment:
+      DISPLAY: unix$DISPLAY
+    privileged: true
+    command: make boot
