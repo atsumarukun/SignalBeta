@@ -7,4 +7,4 @@ cp-efi: x86_64-unknown-uefi
 
 .PHONY: boot
 boot: cp-efi 
-	qemu-system-x86_64 -bios OVMF.fd -drive format=raw,file=fat:rw:esp
+	qemu-system-x86_64 -bios OVMF.fd -drive format=raw,file=fat:rw:esp -monitor stdio
