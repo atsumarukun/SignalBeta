@@ -21,7 +21,7 @@ pub fn open_file(dir: &mut Directory, path: &str) -> Result<SimpleFile, Error> {
     let mut buf = vec![0; path.len() + 1];
     Ok(SimpleFile::new(
         dir.open(
-            &CStr16::from_str_with_buf("hello", &mut buf).unwrap(),
+            &CStr16::from_str_with_buf(path, &mut buf).unwrap(),
             FileMode::CreateReadWrite,
             FileAttribute::empty(),
         )?
