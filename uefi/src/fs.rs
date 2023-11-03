@@ -50,13 +50,6 @@ impl SimpleFile {
         Ok(buf)
     }
 
-    pub fn write(&mut self, buffer: &[u8]) -> Result<(), Error> {
-        match self.file.write(buffer) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Error::from(e.status())),
-        }
-    }
-
     pub fn close(self) {
         self.file.close()
     }
