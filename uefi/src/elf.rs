@@ -1,5 +1,6 @@
-use goblin::elf;
 use alloc::vec;
+use goblin::elf;
+use goblin::error::Error;
 
 pub struct Elf<'a> {
     pub data: elf::Elf<'a>,
@@ -7,8 +8,11 @@ pub struct Elf<'a> {
 }
 
 impl<'a> Elf<'a> {
-    pub fn new(buf: &'a vec::Vec<u8>) -> Self {
-        Self { data: elf::Elf::parse(&buf).unwrap(), buf }
+    pub fn new(buf: &'a vec::Vec<u8>) -> Result<Self, Error> {
+        Ok(Self {
+            data: elf::Elf::parse(&buf)?,
+            buf,
+        })
     }
 
     pub fn get_address_range(&self) -> (u64, u64) {

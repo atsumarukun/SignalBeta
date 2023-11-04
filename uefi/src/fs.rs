@@ -22,7 +22,7 @@ pub fn open_file(dir: &mut Directory, path: &str) -> Result<SimpleFile, Error> {
     Ok(SimpleFile::new(
         dir.open(
             &CStr16::from_str_with_buf(path, &mut buf).unwrap(),
-            FileMode::CreateReadWrite,
+            FileMode::Read,
             FileAttribute::empty(),
         )?
         .into_regular_file()

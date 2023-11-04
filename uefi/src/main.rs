@@ -1,22 +1,26 @@
 #![no_main]
 #![no_std]
+#![feature(error_in_core)]
 
 extern crate alloc;
 
-mod fs;
 mod elf;
+mod error;
+mod fs;
 
+use alloc::vec;
 use core::arch::asm;
 use log::info;
 use uefi::prelude::{entry, Boot, Handle, Status, SystemTable};
 use uefi::proto::media::file::File;
 use uefi::table::boot::{AllocateType, MemoryType};
-use uefi::Error;
-use alloc::vec;
 
 type EntryPoint = extern "C" fn();
 
-fn read_kernel(image_handle: &Handle, system_table: &SystemTable<Boot>) -> Result<vec::Vec<u8>, Error> {
+fn read_kernel(
+    image_handle: &Handle,
+    system_table: &SystemTable<Boot>,
+) -> Result<vec::Vec<u8>, error::Error> {
     let mut dir = fs::open_root_dir(&image_handle, &system_table)?;
     let mut file = fs::open_file(&mut dir, "kernel.elf")?;
     let buf = file.read()?;
@@ -25,21 +29,22 @@ fn read_kernel(image_handle: &Handle, system_table: &SystemTable<Boot>) -> Resul
     Ok(buf)
 }
 
-fn load_kernel(system_table: &mut SystemTable<Boot>, buf: &vec::Vec<u8>) -> Result<u64, Error> {
-    let elf = elf::Elf::new(&buf);
+fn load_kernel(
+    system_table: &mut SystemTable<Boot>,
+    buf: &vec::Vec<u8>,
+) -> Result<u64, error::Error> {
+    let elf = elf::Elf::new(&buf)?;
     let (start_ptr, end_ptr) = elf.get_address_range();
-    let _ = system_table
-        .boot_services()
-        .allocate_pages(
-            AllocateType::Address(start_ptr),
-            MemoryType::LOADER_DATA,
-            ((end_ptr - start_ptr + 0xfff) / 0x1000) as usize,
-        )?;
+    let _ = system_table.boot_services().allocate_pages(
+        AllocateType::Address(start_ptr),
+        MemoryType::LOADER_DATA,
+        ((end_ptr - start_ptr + 0xfff) / 0x1000) as usize,
+    )?;
     elf.load();
     Ok(elf.get_entry())
 }
 
-fn boot(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Result<(), Error> {
+fn boot(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Result<(), error::Error> {
     uefi_services::init(&mut system_table)?;
     info!("Hello world!");
 
