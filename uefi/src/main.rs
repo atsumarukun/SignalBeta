@@ -8,6 +8,7 @@ mod elf;
 mod error;
 mod fs;
 
+use common::frame_buffer;
 use alloc::vec;
 use core::arch::asm;
 use log::info;
@@ -16,7 +17,7 @@ use uefi::proto::media::file::File;
 use uefi::table::boot::{AllocateType, MemoryType, OpenProtocolParams, OpenProtocolAttributes};
 use uefi::proto::console::gop::GraphicsOutput;
 
-type EntryPoint = extern "C" fn();
+type EntryPoint = extern "sysv64" fn(frame_buffer::FrameBufferInfo);
 
 fn read_kernel(
     image_handle: &Handle,
@@ -45,22 +46,20 @@ fn load_kernel(
     Ok(elf.get_entry())
 }
 
-fn draw_display(system_table: &SystemTable<Boot>) -> Result<(), error::Error> {
+fn get_frame_buffer_info(system_table: &SystemTable<Boot>) -> Result<frame_buffer::FrameBufferInfo, error::Error> {
     let boot_services = system_table.boot_services();
-    let handle = boot_services.get_handle_for_protocol::<GraphicsOutput>()?;
     let mut gop = unsafe { boot_services.open_protocol::<GraphicsOutput>(
         OpenProtocolParams {
-            handle: handle,
+            handle: boot_services.get_handle_for_protocol::<GraphicsOutput>()?,
             agent: boot_services.image_handle(),
             controller: None,
         },
         OpenProtocolAttributes::GetProtocol,
     )? };
-    let frame_buffer = unsafe { core::slice::from_raw_parts_mut(gop.frame_buffer().as_mut_ptr(), gop.frame_buffer().size()) };
-    frame_buffer.iter_mut().for_each(|buf| {
-        *buf = 255;
-    });
-    Ok(())
+    Ok(frame_buffer::FrameBufferInfo {
+        ptr: gop.frame_buffer().as_mut_ptr(),
+        size: gop.frame_buffer().size(),
+    })
 }
 
 fn boot(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Result<(), error::Error> {
@@ -71,11 +70,11 @@ fn boot(image_handle: Handle, mut system_table: SystemTable<Boot>) -> Result<(),
     let entry_point_ptr = load_kernel(&mut system_table, &buf)?;
     let entry_point: EntryPoint = unsafe { core::mem::transmute(entry_point_ptr) };
 
-    let _ = draw_display(&system_table)?;
+    let frame_buffer_info = get_frame_buffer_info(&system_table)?;
 
     let _ = system_table.exit_boot_services(MemoryType::LOADER_DATA);
 
-    entry_point();
+    entry_point(frame_buffer_info);
 
     loop {
         unsafe {

@@ -10,3 +10,4 @@ log = "0.4"
 uefi = { version = "0.25", features = ["alloc"] }
 uefi-services = "0.22"
 goblin = { version = "0.7.1", features=["elf32", "elf64", "endian_fd"], default-features = false }
+common = { path = "../common" }
